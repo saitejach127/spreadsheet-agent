@@ -10,8 +10,25 @@ export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const univerRef = useRef<any>(null);
   
-  const [selectedModel, setSelectedModel] = useState<string>("openai:gpt-4o");
+  const [selectedModel, setSelectedModel] = useState<string>("local:default");
+  const [localModels, setLocalModels] = useState<string[]>([]);
   const modelRef = useRef(selectedModel);
+
+  useEffect(() => {
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+    fetch(`${backendUrl}/api/models`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.data && Array.isArray(data.data)) {
+          const models = data.data.map((m: any) => m.id);
+          setLocalModels(models);
+          if (models.length > 0) {
+            setSelectedModel(`local:${models[0]}`);
+          }
+        }
+      })
+      .catch(err => console.error("Failed to fetch local models:", err));
+  }, []);
 
   // Sync state to ref so the effect closure always has the latest value
   useEffect(() => {
@@ -176,7 +193,13 @@ export default function App() {
                 <option value="google:gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
               </optgroup>
               <optgroup label="Local Endpoint">
-                <option value="local:llama3">Local Model (via LOCAL_BASE_URL)</option>
+                {localModels.length > 0 ? (
+                  localModels.map(model => (
+                    <option key={model} value={`local:${model}`}>{model}</option>
+                  ))
+                ) : (
+                  <option value="local:default">Local Model (via LOCAL_BASE_URL)</option>
+                )}
               </optgroup>
             </select>
 

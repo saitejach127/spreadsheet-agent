@@ -11,7 +11,9 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
  */
 function getModel(modelString: string) {
   if (!modelString) modelString = "openai:gpt-4o";
-  const [provider, modelName] = modelString.split(":");
+  const providerIndex = modelString.indexOf(":");
+  const provider = providerIndex !== -1 ? modelString.slice(0, providerIndex) : modelString;
+  const modelName = providerIndex !== -1 ? modelString.slice(providerIndex + 1) : "";
 
   if (provider === "local") {
     // Treats local server as an OpenAI-compatible endpoint
