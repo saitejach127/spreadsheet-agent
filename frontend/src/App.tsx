@@ -4,11 +4,19 @@ import UniverPresetSheetsCoreEnUS from "@univerjs/preset-sheets-core/locales/en-
 import "@univerjs/preset-sheets-core/lib/index.css";
 
 import { socket } from "./SocketClient";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const univerRef = useRef<any>(null);
+  
+  const [selectedModel, setSelectedModel] = useState<string>("openai:gpt-4o");
+  const modelRef = useRef(selectedModel);
+
+  // Sync state to ref so the effect closure always has the latest value
+  useEffect(() => {
+    modelRef.current = selectedModel;
+  }, [selectedModel]);
 
   useEffect(() => {
     if (!containerRef.current || univerRef.current) return;
@@ -62,6 +70,7 @@ export default function App() {
                 taskId,
                 type: "SEARCH",
                 args: [query, instructions],
+                provider: modelRef.current,
               });
 
               // Timeout after 120 seconds
@@ -99,6 +108,7 @@ export default function App() {
                 taskId,
                 type: "CLEAN",
                 args: [data, format],
+                provider: modelRef.current,
               });
 
               // Timeout after 60 seconds
@@ -141,10 +151,38 @@ export default function App() {
 
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "10px", background: "#f0f2f5", borderBottom: "1px solid #ccc", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ padding: "10px", background: "#f0f2f5", borderBottom: "1px solid #ccc", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <h2 style={{ margin: 0, fontSize: "1.2rem", color: "#333", fontWeight: 600 }}>OmniSheet</h2>
-          <div style={{ fontSize: "0.9rem", color: "#666" }}>
-              WebSocket: Connected ⚡ | Use <code>=AI_SEARCH("Query", "Optional Hint")</code> or <code>=AI_CLEAN("Data", "Format")</code>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <select 
+              value={selectedModel} 
+              onChange={(e) => setSelectedModel(e.target.value)}
+              style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ccc", fontSize: "0.9rem", backgroundColor: "white" }}
+            >
+              <optgroup label="OpenAI">
+                <option value="openai:gpt-4o">GPT-4o</option>
+                <option value="openai:gpt-4-turbo">GPT-4 Turbo</option>
+                <option value="openai:gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              </optgroup>
+              <optgroup label="Anthropic">
+                <option value="anthropic:claude-3-5-sonnet-20240620">Claude 3.5 Sonnet</option>
+                <option value="anthropic:claude-3-opus-20240229">Claude 3 Opus</option>
+                <option value="anthropic:claude-3-haiku-20240307">Claude 3 Haiku</option>
+              </optgroup>
+              <optgroup label="Google">
+                <option value="google:gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="google:gemini-1.5-flash">Gemini 1.5 Flash</option>
+                <option value="google:gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
+              </optgroup>
+              <optgroup label="Local Endpoint">
+                <option value="local:llama3">Local Model (via LOCAL_BASE_URL)</option>
+              </optgroup>
+            </select>
+
+            <div style={{ fontSize: "0.9rem", color: "#666" }}>
+                Connected ⚡ | Use <code>=AI_SEARCH("Query", "Hint")</code> or <code>=AI_CLEAN("Data", "Format")</code>
+            </div>
           </div>
       </div>
       <div 

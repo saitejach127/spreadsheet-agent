@@ -4,6 +4,7 @@ interface Task {
   taskId: string;
   type: "SEARCH" | "CLEAN";
   args: any[];
+  provider: string; // The model string from the frontend (e.g. openai:gpt-4o)
   socket: any; // Socket.io socket instance
 }
 
@@ -31,10 +32,10 @@ async function processQueue() {
     let resultValue = "";
     
     if (task.type === "SEARCH") {
-      const { text, source } = await connectAndExtract(task.args[0], task.args[1]);
+      const { text, source } = await connectAndExtract(task.args[0], task.args[1], task.provider);
       resultValue = text;
     } else if (task.type === "CLEAN") {
-      resultValue = await cleanData(task.args[0], task.args[1]);
+      resultValue = await cleanData(task.args[0], task.args[1], task.provider);
     }
 
     // Emit back to UI using taskId

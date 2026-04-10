@@ -5,9 +5,10 @@ OmniSheet is an AI-native spreadsheet application that leverages the [Univer fra
 ## Features
 
 - **Rich Spreadsheet UI**: Built using the `@univerjs/preset-sheets-core` facade for an Excel-like experience.
+- **Multi-Model Support via UI**: Choose your AI brain on the fly using a dropdown in the navigation bar! Supports **OpenAI**, **Anthropic**, **Gemini**, and **Local Endpoints** (Ollama, LM Studio).
 - **Custom AI Formulas**: Native support for agentic tasks directly in cells.
-  - `=AI_SEARCH("Query", "Optional Hint")`: Performs a headless DuckDuckGo Lite search, scrapes the results using Playwright, and passes them to Gemini to extract the precise answer.
-  - `=AI_CLEAN("Messy Data", "Target Format")`: Uses Gemini to reformat and clean dirty data exactly to your required specification.
+  - `=AI_SEARCH("Query", "Optional Hint")`: Performs a headless DuckDuckGo Lite search, scrapes the results using Playwright, and passes them to your selected AI to extract the precise answer.
+  - `=AI_CLEAN("Messy Data", "Target Format")`: Uses AI to reformat and clean dirty data exactly to your required specification.
 - **Asynchronous Execution**: Tasks are dispatched over a real-time `socket.io` connection to an Express/Node.js backend, complete with a task concurrency queue.
 - **Dockerized Architecture**: One-command setup using `docker-compose`.
 
@@ -16,16 +17,11 @@ OmniSheet is an AI-native spreadsheet application that leverages the [Univer fra
 1. **Frontend (`/frontend`)**: 
    - Built with Vite, React 18, and TypeScript.
    - Embeds the Univer spreadsheet via the preset architecture.
-   - Registers asynchronous formula functions via the Univer Facade API (`registerAsyncFunction`).
+   - UI Model Dropdown syncs the active `provider` string back to the formula engine.
 2. **Backend (`/backend`)**:
    - Built with Express, TypeScript, and Socket.io.
-   - Houses an in-memory queue to prevent LLM quota exhaustion.
    - Utilizes `playwright` (Chromium) to execute web scraping tasks in the background.
-
-## Prerequisites
-
-- [Docker](https://docs.docker.com/get-docker/) & Docker Compose.
-- A free [Google Gemini API Key](https://aistudio.google.com/app/apikey).
+   - Uses **Vercel AI SDK** to dynamically route prompts to the correct API provider without proxies.
 
 ## Setup & Running
 
@@ -35,11 +31,18 @@ OmniSheet is an AI-native spreadsheet application that leverages the [Univer fra
    cd spreadsheet-agent
    ```
 
-2. **Supply your Gemini API Key**:
-   Export your Gemini API key strictly into your shell environment before starting Docker:
+2. **Supply your API Keys (`.env`)**:
+   Copy `.env.example` to `.env` and fill in whichever keys you want to use.
    ```bash
-   export GEMINI_API_KEY="your_api_key_here"
+   cp .env.example .env
    ```
+   **Using a Local Server (LM Studio, Ollama) or LiteLLM:** 
+   If you want to use local models or a LiteLLM proxy, set the `LOCAL_BASE_URL` inside the `.env` file to your server's endpoint:
+   - For **LM Studio**: `http://host.docker.internal:1234/v1`
+   - For **Ollama**: `http://host.docker.internal:11434/v1`
+   - For **LiteLLM**: `http://host.docker.internal:4000/v1`
+   
+   *Once configured, select "Local Endpoint" from the UI dropdown.*
 
 3. **Build and start the application**:
    Start both the frontend and backend using Docker Compose. The `--build` tag ensures any local changes to the Dockerfiles are captured.

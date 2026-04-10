@@ -1,10 +1,44 @@
 import { chromium } from "playwright";
-import { GoogleGenAI } from "@google/genai";
+import { generateText } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+/**
+ * Returns the Vercel AI SDK model based on the dropdown string
+ * Format must be provider:model (e.g. openai:gpt-4o, anthropic:claude-3-5-sonnet-20240620)
+ * Allows override via LOCAL_BASE_URL if provider is 'local'
+ */
+function getModel(modelString: string) {
+  if (!modelString) modelString = "openai:gpt-4o";
+  const [provider, modelName] = modelString.split(":");
 
-export async function connectAndExtract(query: string, instructions?: string) {
-  console.log(`Starting search for: ${query}`);
+  if (provider === "local") {
+    // Treats local server as an OpenAI-compatible endpoint
+    const customOpenAI = createOpenAI({
+      baseURL: process.env.LOCAL_BASE_URL || "http://host.docker.internal:1234/v1",
+      apiKey: "dummy-key",
+    });
+    return customOpenAI(modelName || "loaded-model");
+  } 
+  
+  if (provider === "anthropic") {
+    const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    return anthropic(modelName);
+  } 
+  
+  if (provider === "google") {
+    const google = createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY });
+    return google(modelName);
+  }
+  
+  // Default fallback to openai
+  const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return openai(modelName || "gpt-4o");
+}
+
+export async function connectAndExtract(query: string, instructions?: string, providerString: string = "openai:gpt-4o") {
+  console.log(`Starting search for: ${query} using ${providerString}`);
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
   
@@ -39,13 +73,13 @@ ${pageText.slice(0, 2000)}
 
 IMPORTANT: Respond with ONLY the answer, no extra text. Keep it very short and concise.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-lite",
-      contents: prompt,
+    const { text } = await generateText({
+      model: getModel(providerString),
+      prompt: prompt,
     });
     
     return {
-      text: response.text?.trim() || "No result found",
+      text: text?.trim() || "No result found",
       source: searchUrl
     };
   } catch (error) {
@@ -56,7 +90,7 @@ IMPORTANT: Respond with ONLY the answer, no extra text. Keep it very short and c
   }
 }
 
-export async function cleanData(inputData: string, instructions: string) {
+export async function cleanData(inputData: string, instructions: string, providerString: string = "openai:gpt-4o") {
   const prompt = `Take the following data: "${inputData}"
   
   Clean and reformat it exactly according to these instructions: "${instructions}"
@@ -66,10 +100,10 @@ export async function cleanData(inputData: string, instructions: string) {
   - Do not add any conversational text.
   - If it cannot be formatted, return the original data.`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.0-flash-lite",
-    contents: prompt,
+  const { text } = await generateText({
+    model: getModel(providerString),
+    prompt: prompt,
   });
 
-  return response.text?.trim() || inputData;
+  return text?.trim() || inputData;
 }

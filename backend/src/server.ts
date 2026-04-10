@@ -18,10 +18,10 @@ io.on("connection", (socket) => {
 
   socket.on("ai_task", async (data) => {
     console.log("Received AI Task:", data);
-    const { taskId, type, args } = data;
+    const { taskId, type, args, provider } = data;
     
     // Add to in-memory queue
-    addToQueue({ taskId, type, args, socket });
+    addToQueue({ taskId, type, args, provider, socket });
   });
 
   socket.on("disconnect", () => {
